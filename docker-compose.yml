@@ -1,54 +1,64 @@
-version: '0.1'
-networks: 
-  - "host"
+version: '3'
+
+
 services: 
   plex:
-    image: "plexinc/pms-docker"    
+    image: "plexinc/pms-docker"
+    restart: unless-stopped    
     ports:
       - "32400:32400/tcp"
     environment:
       - "TZ=Europe/Paris"
       - PLEX_CLAIM=claim-rfE3Rw5BEBsHEukPFFy1
     volumes:
-      - config:/config 
-      - transcode:/transcode
-      - data:/data
+      - ./config/plex:/config 
+      - ./media/transcode:/transcode
+      - ./media/anime:/anime:ro
+      - ./media/tvShow:/tv:ro
+      - ./media/movie:/movie:ro
   radarr:
     image: "linuxserver/radarr"
+    restart: unless-stopped
     ports:
       -  "7878:7878"
     environment: 
       - "TZ=Europe/Paris"
     volumes: 
-      - configradarr:/config
-      - transcode:/downloads
-      - movie/movies
+      - ./config/radarr:/config
+      - ./torrent/downloaded:/downloads
+      - ./media/movie:/movies
   sonarr:
     image: "linuxserver/sonarr"
+    restart: unless-stopped
     ports:
       -  "8989:8989"
     environment: 
       - "TZ=Europe/Paris"
     volumes: 
-      - configsonarr:/config
-      - transcode:/downloads
-      - TV/tv
+      - ./config/sonarr:/config
+      - ./torrent/downloaded:/downloads
+      - ./media/tvShow:/tv
+      - ./media/anime/anime
   lidarr:
     image: "linuxserver/lidarr"
+    restart: unless-stopped
     ports:
       -  "8686:8686"
     environment: 
       - "TZ=Europe/Paris"
     volumes: 
-      - configs:/config
-      - transcode:/downloads
-      - comics/comics
+      - ./config/lidarr:/config
+      - ./torrent/downloaded:/downloads
+      - ./media/comics:/comics
   deluge:
     image: "linuxserver/deluge"
+    restart: unless-stopped
     ports:
       -  "8080:8112"
     environment: 
       - "TZ=Europe/Paris"
     volumes: 
-      - configs:/config
-      - downloads:/downloads    
+      - ./config/deluge:/config
+      - ./torrent:/downloads
+
+      
