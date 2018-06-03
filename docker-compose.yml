@@ -26,19 +26,21 @@ services:
     volumes: 
       - ./config/radarr:/config
       - ./torrent/downloaded:/downloads
+      - ./torrent/watch:/watch
       - ./media/movie:/movies
-  sonarr:
-    image: "linuxserver/sonarr"
+  medusa:
+    image: "linuxserver/medusa"
     restart: unless-stopped
     ports:
-      -  "8989:8989"
+      -  "8081:8081"
     environment: 
       - "TZ=Europe/Paris"
     volumes: 
-      - ./config/sonarr:/config
+      - ./config/medusa:/config
       - ./torrent/downloaded:/downloads
+      - ./torrent/watch:/watch
       - ./media/tvShow:/tv
-      - ./media/anime/anime
+      - ./media/anime:/anime
   lidarr:
     image: "linuxserver/lidarr"
     restart: unless-stopped
@@ -49,16 +51,45 @@ services:
     volumes: 
       - ./config/lidarr:/config
       - ./torrent/downloaded:/downloads
+      - ./torrent/watch:/watch
       - ./media/comics:/comics
-  deluge:
-    image: "linuxserver/deluge"
-    restart: unless-stopped
+  transmission:
+    image: "haugene/transmission-openvpn"
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun
+    restart: always
     ports:
-      -  "8080:8112"
+      - "9091:9091"
+      - "8888:8888"
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
     environment: 
       - "TZ=Europe/Paris"
+      - "OPENVPN_PROVIDER=PIA"
+      - "OPENVPN_CONFIG=Italy"
+      - "WEBPROXY_ENABLED=false"
+      - "OPENVPN_OPTS=--inactive 3600 --ping 10 --ping-exit 60"
+      - "LOCAL_NETWORK=192.168.0.0/24"
+      - "TRANSMISSION_WEB_UI=combustion"
     volumes: 
       - ./config/deluge:/config
       - ./torrent:/downloads
+  traefik:
+    image: traefik
+    labels: 
+      - traefik.frontend.rule=Host:monitor.guithub.co.uk
+      - traefik.port=8080
+    ports: 
+      - 80:80
+      - 443:443
+    volumes: 
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./traefik.toml:/traefik.toml
+      - ./acme.json:/acme.json  
+
+
 
       
