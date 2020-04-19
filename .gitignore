@@ -1,0 +1,4 @@
+docker/
+.DS_Store
+cloud
+shared_data/nextcloud.log
