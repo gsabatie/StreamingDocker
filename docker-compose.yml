@@ -28,18 +28,11 @@ services:
       - "traefik.enable=true"
       - "traefik.backend=portainer"
       - "traefik.frontend.rule=Host:portainer.${DOMAINNAME}"  
+      - "traefik.frontend.headers.SSLHost=portainer.${DOMAINNAME}"
       - "traefik.port=9000"
       - "traefik.docker.network=traefik_proxy"
-      - "traefik.frontend.headers.SSLRedirect=true"
-      - "traefik.frontend.headers.STSSeconds=315360000"
-      - "traefik.frontend.headers.browserXSSFilter=true"
-      - "traefik.frontend.headers.contentTypeNosniff=true"
-      - "traefik.frontend.headers.forceSTSHeader=true"
-      - "traefik.frontend.headers.SSLHost=example.com"
-      - "traefik.frontend.headers.STSIncludeSubdomains=true"
-      - "traefik.frontend.headers.STSPreload=true"
       - "traefik.frontend.headers.frameDeny=true"
-      - "traefik.frontend.auth.basic.users=${HTTP_USERNAME}:${HTTP_PASSWORD}"
+      - "traefik.frontend.headers.customResponseHeaders=X-Robots-Tag:noindex,nofollow,nosnippet,noarchive,notranslate,noimageindex"
   
   medusa:
     image: "linuxserver/medusa"
@@ -50,21 +43,18 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.backend=medusa"
-      - "traefik.frontend.rule=Host:medusa.${DOMAINNAME}"
+      - "traefik.frontend.rule=Host:tv.${DOMAINNAME}"
+      - "traefik.frontend.headers.SSLHost=${DOMAINNAME}"
       - "traefik.port=8081"
       - "traefik.docker.network=traefik_proxy"
       - "traefik.frontend.headers.customResponseHeaders=X-Robots-Tag:noindex,nofollow,nosnippet,noarchive,notranslate,noimageindex"
       - "traefik.frontend.headers.frameDeny=true"
-      - "traefik.frontend.headers.customFrameOptionsValue=allow-from https:${DOMAINNAME}"
-      # - "traefik.frontend.auth.forward.address=http://oauth:4181"
-      # - "traefik.frontend.auth.forward.authResponseHeaders=X-Forwarded-User"
-      # - "traefik.frontend.auth.forward.trustForwardHeader=true"
     volumes: 
       - ${USERDIR}/docker/medusa:/config
-      - ${USERDIR}/media/torrent/complete/tvshow:/downloads
-      - ${USERDIR}/media/torrent/watch:/watch
-      - ${USERDIR}/media/tvShow:/tv
-      - ${USERDIR}/media/anime:/anime
+      - ${MEDIADIR}/torrent/complete/tvshow:/downloads
+      - ${MEDIADIR}/torrent/watch:/watch
+      - ${MEDIADIR}/tvShow:/tv
+      - ${MEDIADIR}/anime:/anime
       - ${USERDIR}/docker/shared:/shared
 
   couchpotato:
@@ -78,15 +68,17 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.backend=couchpotato"
-      - "traefik.frontend.rule=Host:couchpotato.${DOMAINNAME}"
+      - "traefik.frontend.rule=Host:movie.${DOMAINNAME}"
+      - "traefik.frontend.headers.SSLHost=movie.${DOMAINNAME}"
       - "traefik.port=5050"
       - "traefik.docker.network=traefik_proxy"
-      - "traefik.frontend.auth.basic.users=${HTTP_USERNAME}:${HTTP_PASSWORD}"
+      - "traefik.frontend.headers.frameDeny=true"
+      - "traefik.frontend.headers.customResponseHeaders=X-Robots-Tag:noindex,nofollow,nosnippet,noarchive,notranslate,noimageindex"
     volumes: 
       - ${USERDIR}/docker/couchpotato:/config
-      - ${USERDIR}/media/torrentCompleted:/downloads
-      - ${USERDIR}/media/torrent/watch:/watch
-      - ${USERDIR}/media/movie:/movie
+      - ${MEDIADIR}/torrentCompleted:/downloads
+      - ${MEDIADIR}/torrent/watch:/watch
+      - ${MEDIADIR}/movie:/movie
       - ${USERDIR}/docker/shared:/shared
 
  # TransmissionBT - Torrent Downloader
@@ -110,7 +102,7 @@ services:
     volumes:
       - ${USERDIR}/docker/transmission-vpn/data:/data
       - ${USERDIR}/docker/transmission-vpn/config:/config
-      - ${USERDIR}/media/torrent:/downloads
+      - ${MEDIADIR}/torrent:/downloads
     environment:
       OPENVPN_PROVIDER: $VPN_PROVIDER
       OPENVPN_USERNAME: $NORDVPN_USERNAME
@@ -129,42 +121,30 @@ services:
       TRANSMISSION_RPC_PASSWORD: $TRANSMISSION_RPC_PASSWORD
       TRANSMISSION_RPC_USERNAME: $TRANSMISSION_RPC_USERNAME
       TRANSMISSION_UMASK: 002
-      TRANSMISSION_RATIO_LIMIT: 0.01
+      TRANSMISSION_RATIO_LIMIT: 1.0
       TRANSMISSION_RATIO_LIMIT_ENABLED: "true"
-      TRANSMISSION_ALT_SPEED_DOWN: 2000
+      TRANSMISSION_ALT_SPEED_DOWN: 4000
       TRANSMISSION_ALT_SPEED_ENABLED: "true"
-      TRANSMISSION_ALT_SPEED_UP: 15
-      TRANSMISSION_SPEED_LIMIT_DOWN: 6000
+      TRANSMISSION_ALT_SPEED_UP: 2000
+      TRANSMISSION_SPEED_LIMIT_DOWN: 15000
       TRANSMISSION_SPEED_LIMIT_DOWN_ENABLED: "true"
-      TRANSMISSION_SPEED_LIMIT_UP: 30
+      TRANSMISSION_SPEED_LIMIT_UP: 10000
       TRANSMISSION_SPEED_LIMIT_UP_ENABLED: "true"
       TRANSMISSION_INCOMPLETE_DIR: /downloads/incomplete
       TRANSMISSION_INCOMPLETE_DIR_ENABLED: "true"
       TRANSMISSION_WATCH_DIR: /watch
       TRANSMISSION_WATCH_DIR_ENABLED: "true"
-      TRANSMISSION_DOWNLOAD_DIR: /downloads/completed
+      TRANSMISSION_DOWNLOAD_DIR: /downloads/complete
     labels:
       traefik.enable: "true"
       traefik.backend: transmission-vpn
       traefik.protocol: http
       traefik.port: 9091
-      traefik.frontend.rule: Host:trans.$DOMAINNAME
-      traefik.frontend.headers.SSLHost: trans.$DOMAINNAME
+      traefik.frontend.rule: Host:torrent.$DOMAINNAME
+      traefik.frontend.headers.SSLHost: torrent.$DOMAINNAME
       traefik.docker.network: traefik_proxy
-      traefik.frontend.passHostHeader: "true"
-      traefik.frontend.headers.SSLForceHost: "true"
-      traefik.frontend.headers.SSLRedirect: "true"
-      traefik.frontend.headers.browserXSSFilter: "true"
-      traefik.frontend.headers.contentTypeNosniff: "true"
-      traefik.frontend.headers.forceSTSHeader: "true"
-      traefik.frontend.headers.STSSeconds: 315360000
-      traefik.frontend.headers.STSIncludeSubdomains: "true"
-      traefik.frontend.headers.STSPreload: "true"
       traefik.frontend.headers.customResponseHeaders: X-Robots-Tag:noindex,nofollow,nosnippet,noarchive,notranslate,noimageindex
       traefik.frontend.headers.customFrameOptionsValue: 'allow-from https:$DOMAINNAME'
-      # traefik.frontend.auth.forward.address: "http://oauth:4181"
-      # traefik.frontend.auth.forward.authResponseHeaders: X-Forwarded-User
-      # traefik.frontend.auth.forward.trustForwardHeader: "true"
 
   # Bazarr - Subtitle Management
   bazarr:
@@ -187,18 +167,9 @@ services:
       traefik.backend: bazarr
       traefik.protocol: http
       traefik.port: 6767
-      traefik.frontend.rule: Host:bazarr.$DOMAINNAME
-      traefik.frontend.headers.SSLHost: bazarr.$DOMAINNAME
+      traefik.frontend.rule: Host:subtitle.$DOMAINNAME
+      traefik.frontend.headers.SSLHost: subtitle.$DOMAINNAME
       traefik.docker.network: traefik_proxy
-      traefik.frontend.passHostHeader: "true"
-      traefik.frontend.headers.SSLForceHost: "true"
-      traefik.frontend.headers.SSLRedirect: "true"
-      traefik.frontend.headers.browserXSSFilter: "true"
-      traefik.frontend.headers.contentTypeNosniff: "true"
-      traefik.frontend.headers.forceSTSHeader: "true"
-      traefik.frontend.headers.STSSeconds: 315360000
-      traefik.frontend.headers.STSIncludeSubdomains: "true"
-      traefik.frontend.headers.STSPreload: "true"
       traefik.frontend.headers.customResponseHeaders: X-Robots-Tag:noindex,nofollow,nosnippet,noarchive,notranslate,noimageindex
       traefik.frontend.headers.customFrameOptionsValue: 'allow-from https:$DOMAINNAME'
       # traefik.frontend.auth.forward.address: "http://oauth:4181"
@@ -238,20 +209,8 @@ services:
       traefik.frontend.rule: Host:filebot.$DOMAINNAME
       traefik.frontend.headers.SSLHost: filebot.$DOMAINNAME
       traefik.docker.network: traefik_proxy
-      traefik.frontend.passHostHeader: "true"
-      traefik.frontend.headers.SSLForceHost: "true"
-      traefik.frontend.headers.SSLRedirect: "true"
-      traefik.frontend.headers.browserXSSFilter: "true"
-      traefik.frontend.headers.contentTypeNosniff: "true"
-      traefik.frontend.headers.forceSTSHeader: "true"
-      traefik.frontend.headers.STSSeconds: 315360000
-      traefik.frontend.headers.STSIncludeSubdomains: "true"
-      traefik.frontend.headers.STSPreload: "true"
       traefik.frontend.headers.customResponseHeaders: X-Robots-Tag:noindex,nofollow,nosnippet,noarchive,notranslate,noimageindex
-      traefik.frontend.headers.customFrameOptionsValue: 'allow-from https:$DOMAINNAME'
-      # traefik.frontend.auth.forward.address: "http://oauth:4181"
-      # traefik.frontend.auth.forward.authResponseHeaders: X-Forwarded-User
-      # traefik.frontend.auth.forward.trustForwardHeader: "true"
+
 
       # VSCode - VSCode Editing 
   vscode:
@@ -277,20 +236,7 @@ services:
       traefik.frontend.rule: "Host:vscode.$DOMAINNAME"
       traefik.frontend.headers.SSLHost: vscode.$DOMAINNAME
       traefik.docker.network: traefik_proxy
-      traefik.frontend.passHostHeader: "true"
-      traefik.frontend.headers.SSLForceHost: "true"
-      traefik.frontend.headers.SSLRedirect: "true"
-      traefik.frontend.headers.browserXSSFilter: "true"
-      traefik.frontend.headers.contentTypeNosniff: "true"
-      traefik.frontend.headers.forceSTSHeader: "true"
-      traefik.frontend.headers.STSSeconds: 315360000
-      traefik.frontend.headers.STSIncludeSubdomains: "true"
-      traefik.frontend.headers.STSPreload: "true"
       traefik.frontend.headers.customResponseHeaders: X-Robots-Tag:noindex,nofollow,nosnippet,noarchive,notranslate,noimageindex
-      traefik.frontend.headers.customFrameOptionsValue: 'allow-from https:$DOMAINNAME'
-      # traefik.frontend.auth.forward.address: "http://oauth:4181"
-      # traefik.frontend.auth.forward.authResponseHeaders: X-Forwarded-User
-      # traefik.frontend.auth.forward.trustForwardHeader: "true"
 
   # Plex - Media Server
   plexms:
@@ -300,7 +246,7 @@ services:
     networks:
       - traefik_proxy
     ports:
-      - "$PLEX_PORT:32400/tcp"
+      - "32400:32400/tcp"
       - "3005:3005/tcp"
       - "8324:8324/tcp"
       - "32469:32469/tcp"
@@ -309,17 +255,16 @@ services:
       - "32412:32412/udp"
       - "32413:32413/udp"
       - "32414:32414/udp"
-      - "$PLEX_WEB_TOOLS_PORT:33400"
+      - "33400:33400"
     volumes:
       - $USERDIR/docker/plexms:/config
       - $USERDIR/Downloads:/Downloads
-      - /media:/nas
-      - /Volumes/RAMDisk:/transcode # Offload transcoding to RAM if you have enough RAM
-      - ${USERDIR}/media/torrentCompleted/tvshow:/downloads
-      - ${USERDIR}/media/torrent/watch:/watch
-      - ${USERDIR}/media/tvShow:/tv
-      - ${USERDIR}/media/anime:/anime
-      - ${USERDIR}/media/movie:/movie
+      - ${USERDIR}/transcode:/transcode # Offload transcoding to RAM if you have enough RAM
+      - ${MEDIADIR}/torrentCompleted/tvshow:/downloads
+      - ${MEDIADIR}/torrent/watch:/watch
+      - ${MEDIADIR}/tvShow:/tv
+      - ${MEDIADIR}/anime:/anime
+      - ${MEDIADIR}/movie:/movie
     environment:
       TZ: $TZ
       HOSTNAME: "plex"
@@ -329,25 +274,12 @@ services:
     labels:
       traefik.enable: "true"
       traefik.backend: plexms
-      traefik.protocol: http
       traefik.port: 32400
-      traefik.frontend.rule: Host:plex.$DOMAINNAME
-      traefik.frontend.headers.SSLHost: plex.$DOMAINNAME
+      traefik.frontend.rule: Host:stream.$DOMAINNAME
+      traefik.frontend.headers.SSLHost: stream.$DOMAINNAME
       traefik.docker.network: traefik_proxy
-      traefik.frontend.passHostHeader: "true"
-      traefik.frontend.headers.SSLForceHost: "true"
-      traefik.frontend.headers.SSLRedirect: "true"
-      traefik.frontend.headers.browserXSSFilter: "true"
-      traefik.frontend.headers.contentTypeNosniff: "true"
-      traefik.frontend.headers.forceSTSHeader: "true"
-      traefik.frontend.headers.STSSeconds: 315360000
-      traefik.frontend.headers.STSIncludeSubdomains: "true"
-      traefik.frontend.headers.STSPreload: "true"
       traefik.frontend.headers.customResponseHeaders: X-Robots-Tag:noindex,nofollow,nosnippet,noarchive,notranslate,noimageindex
-      traefik.frontend.headers.customFrameOptionsValue: 'allow-from https:$DOMAINNAME'
-#      traefik.frontend.auth.forward.address: "http://oauth:4181"
-#      traefik.frontend.auth.forward.authResponseHeaders: X-Forwarded-User
-#      traefik.frontend.auth.forward.trustForwardHeader: "true"
+      traefik.frontend.headers.frameDeny: "true"
 
   nextcloud:
     restart: always
@@ -356,24 +288,23 @@ services:
     volumes:
       - ${USERDIR}/docker/nextmedia:/var/www/html
       - ${USERDIR}/docker/shared:/shared
-      - ${USERDIR}/media/anime:/var/www/html/anime:ro
-      - ${USERDIR}/media/comic:/var/www/html/comic:ro
-      - ${USERDIR}/media/game:/var/www/html/game:ro
-      - ${USERDIR}/media/retroGaming:/var/www/html/retroGaming:ro
-      - ${USERDIR}/media/torrent/complete:/var/www/html/torrent:ro
-      - ${USERDIR}/media/tvshow:/var/www/html/tvshow:ro
+      - ${MEDIADIR}/comic:/var/www/html/comic:ro
+      - ${MEDIADIR}/game:/var/www/html/game:ro
+      - ${MEDIADIR}/torrent/complete:/var/www/html/torrent:ro
     environment: 
       - "NEXTCLOUD_TRUSTED_DOMAINS=cloud.${DOMAINNAME}"
     networks:
       - traefik_proxy
     ports: 
-      - "8181:8181"
+      - "81:80"
     labels:
       - "traefik.enable=true"
       - "traefik.backend=nextcloud"
       - "traefik.frontend.rule=Host:cloud.${DOMAINNAME}"
+      - "traefik.frontend.headers.SSLHost=cloud.${DOMAINNAME}"
       - "traefik.port=80"
-      - "traefik.docker.network=traefik_proxy"
+      - "traefik.frontend.headers.frameDeny=true"
+
 
   traefik:
     hostname: traefik
@@ -385,26 +316,24 @@ services:
     networks:
       - default
       - traefik_proxy
+    dns:
+#      - $PIHOLE_IP
+      - 1.1.1.1
     ports:
       - "80:80"
       - "443:443"
       - "8080:8080"
+    environment:
+      - CF_API_EMAIL=${CLOUDFLARE_EMAIL}
+      - CF_API_KEY=${CLOUDFLARE_API_KEY}
     labels:
-      - "traefik.enable=true"
-      - "traefik.backend=traefik"
-      - "traefik.frontend.rule=Host:traefik.${DOMAINNAME}"  
-      - "traefik.port=8080"
-      - "traefik.docker.network=traefik_proxy"
-      - "traefik.frontend.headers.SSLRedirect=true"
-      - "traefik.frontend.headers.STSSeconds=315360000"
-      - "traefik.frontend.headers.browserXSSFilter=true"
-      - "traefik.frontend.headers.contentTypeNosniff=true"
-      - "traefik.frontend.headers.forceSTSHeader=true"
-      - "traefik.frontend.headers.SSLHost=withlovefrom.dev"
-      - "traefik.frontend.headers.STSIncludeSubdomains=true"
-      - "traefik.frontend.headers.STSPreload=true"
-      - "traefik.frontend.headers.frameDeny=true"
-      - "traefik.frontend.auth.basic.users=${HTTP_USERNAME}:${HTTP_PASSWORD}"
+      traefik.enable: "true"
+      traefik.backend: traefik
+      traefik.port: 8080
+      traefik.frontend.rule: Host:traefik.$DOMAINNAME
+      traefik.frontend.headers.SSLHost: traefik.$DOMAINNAME
+      traefik.docker.network: traefik_proxy
+      traefik.frontend.headers.customResponseHeaders: X-Robots-Tag:noindex,nofollow,nosnippet,noarchive,notranslate,noimageindex
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ${USERDIR}/docker/traefik:/etc/traefik
@@ -433,12 +362,11 @@ services:
       traefik.backend: glances
       traefik.protocol: http
       traefik.port: 61208
-      traefik.frontend.rule: Host:glances.${DOMAINNAME}
-      traefik.frontend.headers.SSLHost: glances.${DOMAINNAME}
+      traefik.frontend.rule: Host:stats.${DOMAINNAME}
+      traefik.frontend.headers.SSLHost: stats.${DOMAINNAME}
       traefik.docker.network: traefik_proxy
-      traefik.frontend.auth.basic.users: '${HTTP_USERNAME}:${HTTP_PASSWORD}'
-      
-      # traefik.frontend.auth.forward.address: "http://oauth:4181"
+      traefik.frontend.headers.customResponseHeaders: X-Robots-Tag:noindex,nofollow,nosnippet,noarchive,notranslate,noimageindex
+      traefik.frontend.headers.frameDeny: "true"
 
   # StatPing - Status Page & Monitoring Server
   statping:
@@ -456,11 +384,11 @@ services:
     environment:
       VIRTUAL_HOST: localhost
       VIRTUAL_PORT: 8080
-      DB_CONN: postgres
-      DB_HOST: postgres
-      DB_USER: ${STATPING_DB_USER}
-      DB_PASS: ${STATPING_DB_PASS}
-      DB_DATABASE: ${STATPING_DB}
+      # DB_CONN: postgres
+      # DB_HOST: postgres
+      # DB_USER: ${STATPING_DB_USER}
+      # DB_PASS: ${STATPING_DB_PASS}
+      # DB_DATABASE: ${STATPING_DB}
       IS_DOCKER: "true"
       DISABLE_LOGS: "false"
       NAME: StatPing
@@ -468,10 +396,9 @@ services:
     labels:
       traefik.enable: "true"
       traefik.backend: statping
-      traefik.protocol: http
       traefik.port: 8080
-      traefik.frontend.rule: "Host:statping.${DOMAINNAME}"
-      traefik.frontend.headers.SSLHost: statping.${DOMAINNAME}
+      traefik.frontend.rule: "Host:ping.${DOMAINNAME}"
+      traefik.frontend.headers.SSLHost: ping.${DOMAINNAME}
       traefik.docker.network: traefik_proxy 
 
 
